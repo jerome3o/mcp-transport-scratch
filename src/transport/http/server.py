@@ -23,20 +23,28 @@ AllowedClientRequest = (
 )
 
 
-class AllowedJSONRPCRequest(types.JSONRPCRequest):
-    params: AllowedClientRequest
-
-
 def make_mcp_http_server_router(mcp_server: Server):
     router = APIRouter()
 
     @router.post("/mcp/http")
-    async def handle_mcp_http(message: AllowedJSONRPCRequest) -> types.ServerResult:
+    async def handle_mcp_http(message: AllowedClientRequest) -> types.ServerResult:
 
         async with create_session(mcp_server) as session:
             session.initialize()
-            result = await session.send_request(message.params, types.ServerResult)
 
-        return result
+            message_dict = message.model_dump()
+            _id = message_dict.pop("id")
+            message_dict.pop("jsonrpc")
+
+            mcp_result = await session.send_request(
+                message.model_validate(message_dict), types.ServerResult
+            )
+            result_dict = {
+                "id": _id,
+                "jsonrpc": "2.0",
+                "result": mcp_result.model_dump(),
+            }
+
+        return result_dict
 
     return router

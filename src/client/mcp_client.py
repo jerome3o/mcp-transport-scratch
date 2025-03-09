@@ -39,7 +39,6 @@ async def test_http():
             _logger.info("Client initialized")
             tool_result = await client.list_tools()
             _logger.info(f"Tool result: {tool_result}")
-            print(tool_result)
     _logger.info("HTTP test completed")
 
 

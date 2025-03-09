@@ -7,6 +7,9 @@ from mcp import types
 from httpx import AsyncClient
 from contextlib import asynccontextmanager
 
+import logging
+
+_logger = logging.getLogger(__name__)
 
 _canned_initization_result = InitializeResult(
     protocolVersion=LATEST_PROTOCOL_VERSION,
@@ -43,28 +46,43 @@ async def client_http_transport(
     async def listen_for_messages_from_client():
         try:
             while True:
-                await anyio.sleep(0)
+                await anyio.sleep(0.001)
                 async for message in write_stream_reader:
+
                     if message.root.method == "initialize":
                         await read_stream_writer.send(
-                            types.JSONRPCResponse(
-                                id=message.root.id,
-                                result=_canned_initization_result.model_dump(),
-                                jsonrpc="2.0",
+                            types.JSONRPCMessage(
+                                types.JSONRPCResponse(
+                                    id=message.root.id,
+                                    result=_canned_initization_result.model_dump(),
+                                    jsonrpc="2.0",
+                                )
                             )
                         )
                         await anyio.sleep(0)
                         continue
 
-                    response = await httpx_client.post(url, json=message.model_dump())
+                    if message.root.method == "notifications/initialized":
+                        continue
+
+                    response = await httpx_client.post(
+                        url,
+                        json=message.model_dump(
+                            exclude_unset=True,
+                        ),
+                    )
                     response.raise_for_status()
                     response_json = response.json()
                     await read_stream_writer.send(
-                        JSONRPCMessage.model_validate_json(response_json)
+                        types.JSONRPCMessage.model_validate(response_json)
                     )
         except anyio.get_cancelled_exc_class():
             pass
+        except Exception as e:
+            _logger.error("Error in listen_for_messages_from_client", e)
+            raise
 
     async with anyio.create_task_group() as tg:
         tg.start_soon(listen_for_messages_from_client)
         yield (read_stream, write_stream)
+        tg.cancel_scope.cancel()
