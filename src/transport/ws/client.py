@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def websocket_client(url: str) -> AsyncGenerator[
+async def client_websocket_transport(url: str) -> AsyncGenerator[
     tuple[
         MemoryObjectReceiveStream[types.JSONRPCMessage | Exception],
         MemoryObjectSendStream[types.JSONRPCMessage],
