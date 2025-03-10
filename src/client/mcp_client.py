@@ -37,16 +37,17 @@ async def validate_client(client: ClientSession):
 
 
 async def test_memory():
-    _logger.info("Starting memory test")
+    _logger.info("Starting in-memory client test")
     async with create_connected_server_and_client_session(mcp._mcp_server) as client:
         await validate_client(client)
 
     _logger.info("Memory test completed")
+    _logger.info("")
 
 
 async def test_websocket():
-    _logger.info("Starting websocket test")
-    async with client_websocket_transport("ws://localhost:8000/mcp/ws") as (
+    _logger.info("Starting websocket client test")
+    async with client_websocket_transport("ws://127.0.0.1:8000/mcp/ws") as (
         read_stream,
         write_stream,
     ):
@@ -55,11 +56,12 @@ async def test_websocket():
             await validate_client(client)
 
     _logger.info("Websocket test completed")
+    _logger.info("")
 
 
 async def test_http():
-    _logger.info("Starting HTTP test")
-    async with client_http_transport("http://localhost:8000/mcp/http") as (
+    _logger.info("Starting HTTP client test")
+    async with client_http_transport("http://127.0.0.1:8000/mcp/http") as (
         read_stream,
         write_stream,
     ):
@@ -68,9 +70,11 @@ async def test_http():
             await validate_client(client)
 
     _logger.info("HTTP test completed")
+    _logger.info("")
 
 
 async def main():
+    await test_memory()
     await test_websocket()
     await test_http()
 
